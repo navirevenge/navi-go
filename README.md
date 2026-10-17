@@ -23,19 +23,24 @@ docker compose --env-file .env up --build
 
 Open http://localhost:3000. API: http://localhost:8080, OpenAPI UI: http://localhost:8080/swagger-ui.html.
 
-## Run for development
+## Run locally with H2
+
+The `local` Spring profile is active by default and stores its H2 database in `backend/data/`.
+PostgreSQL remains configured in `application.yml` for deployments; select an explicit deployment
+profile when staging and production profiles are added.
 
 ```bash
-# 1. database
-docker compose --env-file .env up db
-# 2. backend (Java 21)
+# Terminal 1: build and run the backend (Java 21 and Maven)
 cd backend
-export NAVIGO_DB_PASSWORD=<POSTGRES_PASSWORD> NAVIGO_JWT_SECRET=<32+ byte secret>
-mvn spring-boot:run
-# 3. frontend (Node 22+)
+ mvn package
+NAVIGO_JWT_SECRET="$(openssl rand -base64 48)" java -jar target/navigo-backend-0.1.0-SNAPSHOT.jar
+
+# Terminal 2: run the frontend (Node 22+)
 cd frontend
 npm ci && npm run dev
 ```
+
+Open http://localhost:3000. The frontend connects to the backend at http://localhost:8080.
 
 ## Tests
 

@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    default: local
   application:
     name: navigo-backend
   datasource:

@@ -122,7 +122,7 @@ The `local` profile enables the H2 web console. Start the backend first (step 2)
 | Setting | Value |
 | --- | --- |
 | Driver class | `org.h2.Driver` |
-| JDBC URL | `jdbc:h2:file:./.data/navigo;MODE=PostgreSQL` (relative to `backend/`) |
+| JDBC URL | `jdbc:h2:file:./.data/navigo;MODE=PostgreSQL;AUTO_SERVER=TRUE` (relative to `backend/`) |
 | User | `sa` |
 | Password | empty |
 
@@ -138,11 +138,11 @@ Use the H2 Shell from the H2 jar that Maven already downloaded (version 2.3.232)
 cd backend
 H2_JAR="$HOME/.m2/repository/com/h2database/h2/2.3.232/h2-2.3.232.jar"
 java -cp "$H2_JAR" org.h2.tools.Shell \
-  -url "jdbc:h2:file:./.data/navigo;MODE=PostgreSQL" \
+  -url "jdbc:h2:file:./.data/navigo;MODE=PostgreSQL;AUTO_SERVER=TRUE" \
   -user sa -password ""
 ```
 
-The Shell uses the same settings as the web console. Stop the backend before opening the database with the Shell. H2 file databases are locked by one process at a time, so the Shell fails with "Database may be already in use" while the backend is running.
+The Shell uses the same URL as the web console, including `AUTO_SERVER=TRUE`, so it can open the database while the backend is running. `AUTO_SERVER` lets H2 share the file between processes on localhost. Without it, the second process fails with "Database may be already in use" or "The file is locked". See [error-log.md](./error-log.md).
 
 Useful queries:
 
@@ -156,7 +156,7 @@ Run one query without the interactive prompt:
 
 ```bash
 java -cp "$H2_JAR" org.h2.tools.Shell \
-  -url "jdbc:h2:file:./.data/navigo;MODE=PostgreSQL" \
+  -url "jdbc:h2:file:./.data/navigo;MODE=PostgreSQL;AUTO_SERVER=TRUE" \
   -user sa -password "" \
   -sql "SELECT email, display_name FROM users"
 ```
@@ -225,12 +225,12 @@ Also check in the UI at `http://localhost:3000` that the dashboard shows the stu
 
 ## 8. Clean up test data
 
-Delete one test user. Stop the backend first, then run (in the same shell where `H2_JAR` was set in step 5):
+Delete one test user. The backend can keep running. In the same shell where `H2_JAR` was set in step 5, run:
 
 ```bash
 cd backend
 java -cp "$H2_JAR" org.h2.tools.Shell \
-  -url "jdbc:h2:file:./.data/navigo;MODE=PostgreSQL" \
+  -url "jdbc:h2:file:./.data/navigo;MODE=PostgreSQL;AUTO_SERVER=TRUE" \
   -user sa -password "" \
   -sql "DELETE FROM users WHERE email = 'qa.tester@example.com'"
 ```
@@ -251,7 +251,7 @@ Flyway recreates the schema and seed content on the next backend start.
 | --- | --- |
 | "Unable to locate a Java Runtime" | JDK 21 is not installed. Install it and confirm `java -version`. |
 | Backend fails with a missing `NAVIGO_DB_URL` or `NAVIGO_JWT_SECRET` | The profile is not active. Use `--spring.profiles.active=local` or `-Dspring-boot.run.profiles=local`. |
-| "Database may be already in use" in the H2 Shell | The backend holds the file lock. Stop the backend, then open the Shell. |
+| "Database may be already in use" or "The file is locked" at backend startup | Another process opened the database without `AUTO_SERVER=TRUE`, for example a backend from before this fix. Stop that process, rebuild, and start again. See [error-log.md](./error-log.md). |
 | `/h2-console` returns `401` or `404` | The console is enabled only by the `local` profile. Rebuild and restart the backend with `--spring.profiles.active=local`. A backend started before these changes still has the old configuration. |
 | Console says `Database "/Users/<you>/test" not found` (error 90149) | The login form still has the default `jdbc:h2:~/test` URL. Use the JDBC URL from section 5. See [error-log.md](./error-log.md). |
 | Login spins or requests hang after a rebuild; the log shows `NoClassDefFoundError: ch/qos/logback/...` | The backend is still running a jar that was rebuilt underneath it. Stop it, rebuild if needed, and start it again. See [error-log.md](./error-log.md). |

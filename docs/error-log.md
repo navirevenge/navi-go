@@ -37,7 +37,7 @@ The console was reachable, so the security fix was working. The failure was only
    | Field | Value |
    | --- | --- |
    | Driver class | `org.h2.Driver` |
-   | JDBC URL | `jdbc:h2:file:./.data/navigo;MODE=PostgreSQL` |
+   | JDBC URL | `jdbc:h2:file:./.data/navigo;MODE=PostgreSQL;AUTO_SERVER=TRUE` |
    | User | `sa` |
    | Password | (empty) |
 
@@ -233,4 +233,67 @@ No application code changed. The fix is in the run procedure, and [running-local
 - Never run `mvn package`, `mvn clean`, or `mvn install` in `backend/` while the backend started from `target/` is still running. Stop the backend first, or restart it after the build.
 - If the backend hangs, check for `NoClassDefFoundError` in its log before debugging application code. The error is usually a stale JVM, not the code.
 - Any "server stopped responding" report should start with `curl -m 10 http://localhost:8080/actuator/health`. A `000` with no bytes means the request thread died or the server is stuck. Take a thread dump with `jstack <pid>` before restarting, so the state is preserved.
+
+---
+
+## Second backend launch fails: `The file is locked: backend/.data/navigo.mv.db`
+
+**Area:** Local development, backend startup and H2 file database (`backend/src/main/resources/application-local.yml`)
+**Issue:** [#15](https://github.com/navirevenge/navi-go/issues/15)
+
+### Symptom
+
+Starting the backend with the `local` profile while another backend was already running failed at startup:
+
+```
+Caused by: org.h2.jdbc.JdbcSQLNonTransientConnectionException: Database may be already in use: "/Users/xaymunyun/Documents/projects 2026/navi-go/backend/.data/navigo.mv.db". Possible solutions: close all other connection(s); use the server mode [90020-232]
+Caused by: org.h2.mvstore.MVStoreException: The file is locked: /Users/xaymunyun/Documents/projects 2026/navi-go/backend/.data/navigo.mv.db [2.3.232/7]
+```
+
+The H2 Shell and H2 console also fail with the same error while the backend is running.
+
+### Cause
+
+The `local` profile uses `jdbc:h2:file:./.data/navigo;MODE=PostgreSQL`, an embedded H2 file database. H2 locks the `.mv.db` file for the process that opens it. A second process that opens the same file without a shared-access setting is refused.
+
+- The backend that was running had been restarted at 17:24 and held the lock (PID 25486, the only process with the file open).
+- The second launch tried to open the same file, so Flyway's startup connection failed.
+- The H2 trace log (`backend/.data/navigo.trace.db`) recorded the same `file is locked` error nine times, which matches the failed launches.
+
+### Explanation
+
+Embedded H2 is single-process by default. That is safe, but it means the backend, the H2 console, and the H2 Shell cannot use the database at the same time. The earlier docs told users to stop the backend before opening the Shell. That is a workaround, not a fix, and it also blocks the console while the app is running.
+
+H2's `AUTO_SERVER=TRUE` setting lets the first process that opens the file also start a local server on a random port. Later processes on the same machine connect through that server instead of locking the file. Without the setting, the second process fails as shown above.
+
+### Verification
+
+1. `mvn -B package` after the change: 10 tests, 0 failures, `BUILD SUCCESS`. The build ran with the backend stopped, following the rule in this log.
+2. Rebuilt jar started on port 8080 with `--spring.profiles.active=local`: `/actuator/health` returned `UP`.
+3. A second backend on port 8091 against the same database started without the lock error and returned `UP`. Port 8080 stayed up.
+4. The H2 Shell, with the new URL, read `information_schema.tables` (15 tables) while both backends were running.
+5. The temporary 8091 process was then stopped. Port 8080 stayed up.
+
+### Resolution
+
+1. Add `;AUTO_SERVER=TRUE` to the local JDBC URL in [application-local.yml](../backend/src/main/resources/application-local.yml):
+
+   ```yaml
+   url: jdbc:h2:file:./.data/navigo;MODE=PostgreSQL;AUTO_SERVER=TRUE
+   ```
+
+2. Use the same URL in the H2 console and the H2 Shell. Both are documented in [running-locally.md](./running-locally.md#5-open-the-h2-database).
+3. Rebuild and restart the backend. A backend still running the old jar keeps the lock without `AUTO_SERVER`, so it must be restarted.
+
+### Trade-offs
+
+- `AUTO_SERVER` opens a TCP port on the local machine that other local processes can use. It is acceptable for a laptop dev database, which is why it is set only in the `local` profile. Production uses PostgreSQL and does not read this URL.
+- The database still holds one file. Two backends writing at once share it through H2's server, but this setup is for local use only.
+
+### Prevention
+
+- Every H2 URL in the docs must use the same settings as the datasource. Before, the docs had two different URLs.
+- Use `;AUTO_SERVER=TRUE` for any embedded H2 file database that a developer might open from a second tool.
+- Check the trace log (`backend/.data/navigo.trace.db`) when startup fails with a database error. It keeps the full stack trace even when the console output is cut off.
+
 

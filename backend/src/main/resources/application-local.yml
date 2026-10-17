@@ -1,7 +1,8 @@
 # Local development: file-based H2 in PostgreSQL mode. Data persists in backend/.data.
+# AUTO_SERVER lets a second process (another backend, the H2 console, H2 Shell) share the file on localhost.
 spring:
   datasource:
-    url: jdbc:h2:file:./.data/navigo;MODE=PostgreSQL
+    url: jdbc:h2:file:./.data/navigo;MODE=PostgreSQL;AUTO_SERVER=TRUE
     username: sa
     password: ""
   h2:

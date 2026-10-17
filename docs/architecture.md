@@ -61,4 +61,4 @@ will supply readings at content-ingest time in Phase 2.
 1. A user can register, sign in and sign out; unauthenticated API calls return 401.
 2. The dashboard shows level, streak, objectives, weekly stats, skills and a recommended lesson from backend data.
 3. Completing a study session updates streak, weekly minutes, objectives and the recommendation.
-4. `docker compose up` starts DB, API and web; CI runs backend and frontend tests.
+4. `docker compose up` starts DB, API and web; CI runs backend (`mvn verify` with JaCoCo and Checkstyle gates) and frontend (lint, typecheck, coverage, build) jobs, then a `CI Quality Gate`. See [ci-cd-standard.md](./ci-cd-standard.md).

@@ -1,6 +1,6 @@
 # NAVI語 (Navigo)
 
-An AI-powered Japanese learning platform: structured grammar and vocabulary, spaced repetition, conversation
+NAVI語 (Navi-go, ナビ語) is an AI-powered Japanese learning platform: structured grammar and vocabulary, spaced repetition, conversation
 practice and adaptive study plans. English-speaking learners, beginner → conversational fluency.
 
 > **Status: Phase 1 (Foundation).** Working today: registration/login (JWT), application shell with the six main

@@ -68,6 +68,8 @@ Check that it is up:
 curl -s http://localhost:8080/actuator/health
 ```
 
+Rebuilding does not update a backend that is already running. Stop the backend before running `mvn package`, `mvn clean`, or `mvn install` in `backend/`, and start it again after the build. If you skip this, requests can hang and the log shows `NoClassDefFoundError`. See [error-log.md](./error-log.md).
+
 Endpoints: API at `http://localhost:8080`, OpenAPI UI at `http://localhost:8080/swagger-ui.html`.
 
 ## 3. Build and run the frontend
@@ -252,6 +254,7 @@ Flyway recreates the schema and seed content on the next backend start.
 | "Database may be already in use" in the H2 Shell | The backend holds the file lock. Stop the backend, then open the Shell. |
 | `/h2-console` returns `401` or `404` | The console is enabled only by the `local` profile. Rebuild and restart the backend with `--spring.profiles.active=local`. A backend started before these changes still has the old configuration. |
 | Console says `Database "/Users/<you>/test" not found` (error 90149) | The login form still has the default `jdbc:h2:~/test` URL. Use the JDBC URL from section 5. See [error-log.md](./error-log.md). |
+| Login spins or requests hang after a rebuild; the log shows `NoClassDefFoundError: ch/qos/logback/...` | The backend is still running a jar that was rebuilt underneath it. Stop it, rebuild if needed, and start it again. See [error-log.md](./error-log.md). |
 | Port 8080 or 3000 already in use | Another process is running. Stop it or find it with `lsof -i :8080`. |
 | Register returns `400` | Password must be 8 to 72 characters, `currentLevel` must be `N1` to `N5`, and `email` must be valid. |
 | Register returns `409` | The email already exists. Sign in with it instead, or use a different email. |

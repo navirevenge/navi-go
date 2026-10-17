@@ -173,3 +173,64 @@ Added `"coverage/**"` to `globalIgnores` in [eslint.config.mjs](../frontend/esli
 - Local `mvn -B verify` passes: 10 tests, 0 Checkstyle violations, and the JaCoCo gates (line 80%, branch 55%) met.
 - GitHub Actions run 39069468467 on PR #12: backend, frontend, and CI Quality Gate all pass.
 
+---
+
+## Login hangs after valid credentials; `NoClassDefFoundError: ch/qos/logback/classic/spi/ThrowableProxy` in the log
+
+**Area:** Local development, running backend (`backend/target/navigo-backend-0.1.0-SNAPSHOT.jar`)
+**Issue:** [#13](https://github.com/navirevenge/navi-go/issues/13)
+
+### Symptom
+
+The login page spins after valid credentials. The backend log shows Tomcat errors that end in:
+
+```
+Exception in thread "http-nio-8080-exec-7" java.lang.NoClassDefFoundError: ch/qos/logback/classic/spi/ThrowableProxy
+Caused by: java.lang.ClassNotFoundException: ch.qos.logback.classic.spi.ThrowableProxy
+```
+
+While the bug was live, even `curl http://localhost:8080/actuator/health` timed out with no bytes received. The JVM was alive, its acceptor and poller threads were healthy, and no request thread was blocked in application code.
+
+### Cause
+
+The backend was started from a fat jar that was rebuilt while it was still running.
+
+- The app was started at 16:20:05 with `java -jar target/navigo-backend-0.1.0-SNAPSHOT.jar --spring.profiles.active=local`.
+- `mvn package` rewrote `target/navigo-backend-0.1.0-SNAPSHOT.jar.original` at 16:58:25, while that process was still running.
+- A JVM loads classes lazily from the jar it opened at startup. The logback classes are nested in the fat jar under `BOOT-INF/lib/`. The first time the app logs an exception, it needs `ThrowableProxy`. If the jar on disk changed since startup, that read fails.
+- The failure is hidden. Tomcat's `NioEndpoint` tries to log the original socket error, the logging call throws `NoClassDefFoundError`, and the worker thread dies without writing a response. The client waits until it times out. In the browser, that looks like a login that never finishes.
+
+The jar on disk was intact. The nested `logback-classic-1.5.18.jar` contains `spi/ThrowableProxy`. The problem is the running JVM, not the build output.
+
+### Explanation
+
+Rebuilding a jar does not update a process that is already running. Maven replaces the file, but the JVM keeps reading the old file's offsets. Any class the JVM had not loaded yet is read from the wrong bytes or fails to load. Here, `ThrowableProxy` was first needed when Tomcat logged the first request error, so the first logged error was also the first attempt to load that class.
+
+The login logic itself is fine. On a fresh build with a fresh start, `POST /api/v1/auth/register` returned `201` and `POST /api/v1/auth/login` returned `200` in about 0.1 s.
+
+### Verification
+
+Each step was run on a scratch copy, not on the user's running instance:
+
+1. Fresh build, fresh start on port 8091, in-memory H2: register `201`, login `200` in 0.10 s. The login code works.
+2. Thread dump of the stuck instance (`jstack`): request threads idle, acceptor and poller running, no `BLOCKED` threads, no deadlock, no application frames. The server was accepting connections but never answering.
+3. Open file handles of the stuck JVM: it held `target/navigo-backend-0.1.0-SNAPSHOT.jar.original`, rewritten at 16:58:25.
+4. Reproduction: start a copy of the fat jar on port 8092. Overwrite the copy in place with the rebuilt `.original` jar. Then `GET /api/v1/auth/me` and `POST /api/v1/auth/login` both hung for 10 s with no response, and the log showed `NoClassDefFoundError: ch/qos/logback/classic/spi/ThrowableProxy` on `http-nio-8092-exec-2` and `-exec-3`. This matches the user's log.
+
+Not confirmed: the first error that Tomcat was logging. The pasted log starts after it. The first failing request is not known, so the exact application exception behind the first log line remains unidentified. This does not change the fix, because the hang happens whatever the original error was.
+
+### Resolution
+
+1. Stop the running backend (`Ctrl+C` in its terminal, or `kill <pid>` after finding it with `lsof -i :8080`).
+2. Rebuild: `cd backend && mvn -B package`.
+3. Start the rebuilt jar again: `java -jar target/navigo-backend-0.1.0-SNAPSHOT.jar --spring.profiles.active=local`.
+4. Confirm: `curl -s http://localhost:8080/actuator/health` returns `UP`, and a login with a valid account returns `200`.
+
+No application code changed. The fix is in the run procedure, and [running-locally.md](./running-locally.md) now says to stop or restart the backend after every rebuild.
+
+### Prevention
+
+- Never run `mvn package`, `mvn clean`, or `mvn install` in `backend/` while the backend started from `target/` is still running. Stop the backend first, or restart it after the build.
+- If the backend hangs, check for `NoClassDefFoundError` in its log before debugging application code. The error is usually a stale JVM, not the code.
+- Any "server stopped responding" report should start with `curl -m 10 http://localhost:8080/actuator/health`. A `000` with no bytes means the request thread died or the server is stuck. Take a thread dump with `jstack <pid>` before restarting, so the state is preserved.
+

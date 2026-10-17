@@ -1,5 +1,6 @@
-package app.navigo.auth;
+package app.navigo.config;
 
+import app.navigo.auth.JwtProperties;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -30,17 +31,27 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http,
+                                    @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled) throws Exception {
         // CSRF protection is unnecessary: the API is stateless and authenticates only via Authorization header
         // bearer tokens (no cookies or server sessions), so browsers never attach credentials automatically.
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(a -> a
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
-                        .requestMatchers("/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(a -> {
+                    a.requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
+                            .requestMatchers("/actuator/health/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
+                    // The H2 console has its own login, and it renders in frames, so it needs both settings below.
+                    // Both are applied only when the console is enabled, so prod keeps strict defaults.
+                    if (h2ConsoleEnabled) {
+                        a.requestMatchers("/h2-console/**").permitAll();
+                    }
+                    a.anyRequest().authenticated();
+                })
                 .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()));
+        if (h2ConsoleEnabled) {
+            http.headers(h -> h.frameOptions(f -> f.sameOrigin()));
+        }
         return http.build();
     }
 

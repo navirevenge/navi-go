@@ -16,6 +16,18 @@ Browser (Next.js, PWA manifest) ──HTTPS/JSON──▶ Spring Boot API ──
 - **Database** – Flyway migrations in `backend/src/main/resources/db/migration`. Learning content
   (grammar, vocabulary, lessons, sentences) is separate from user progress (sessions, cards, events, mistakes).
 
+## API response shapes
+Controllers return records from each module's `*Dtos` class, never database rows or raw entities. The study-session
+endpoints return `SessionView` ([StudyDtos.java](../backend/src/main/java/app/navigo/study/StudyDtos.java)) because:
+
+- **One shape for start and complete.** `POST /study-sessions` and `POST /study-sessions/{id}/complete` both return
+  `SessionView`, so the client parses one type. Open sessions are valid because `completedAt` and `durationMinutes`
+  are nullable.
+- **Built from a query, not an entity.** Study code uses `JdbcClient` and has no JPA entity for sessions. `StudyService.find`
+  maps each row into the view, which keeps the response to the fields the client needs.
+- **No `userId` in the response.** Each query filters on the caller's id (`WHERE user_id = :u`). A session that belongs
+  to another learner returns `404`, so the API never confirms that the id exists.
+
 ## Environments
 Spring profiles choose the database and secrets. With no profile active, startup fails instead of falling back to a database.
 

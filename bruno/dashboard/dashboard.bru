@@ -1,0 +1,24 @@
+meta {
+  name: Get dashboard
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/dashboard?timezone=Asia/Tokyo
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("returns streak, weekly stats and a recommended lesson", function () {
+    expect(res.status).to.equal(200);
+    expect(res.body.streakDays).to.be.a("number");
+    expect(res.body.weekly.minutes).to.be.a("number");
+    expect(res.body.recommendedLesson.slug).to.be.a("string");
+  });
+}

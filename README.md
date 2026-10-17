@@ -32,7 +32,7 @@ profile when staging and production profiles are added.
 ```bash
 # Terminal 1: build and run the backend (Java 21 and Maven)
 cd backend
- mvn package
+mvn package
 NAVIGO_JWT_SECRET="$(openssl rand -base64 48)" java -jar target/navigo-backend-0.1.0-SNAPSHOT.jar
 
 # Terminal 2: run the frontend (Node 22+)

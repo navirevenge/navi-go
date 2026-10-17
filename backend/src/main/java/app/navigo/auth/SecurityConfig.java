@@ -31,6 +31,8 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // CSRF protection is unnecessary: the API is stateless and authenticates only via Authorization header
+        // bearer tokens (no cookies or server sessions), so browsers never attach credentials automatically.
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

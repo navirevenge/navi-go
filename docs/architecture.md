@@ -4,7 +4,7 @@
 A modular monolith with a clear frontend/backend split.
 
 ```
-Browser (Next.js, PWA manifest) ──HTTPS/JSON──▶ Spring Boot API ──JDBC──▶ PostgreSQL
+Browser (Next.js, PWA manifest) ──HTTPS/JSON──▶ Spring Boot API ──JDBC──▶ PostgreSQL (staging/prod) · H2 file DB (local)
                                                    │ (Phase 3+) provider interfaces
                                                    └──▶ LLM / STT / TTS (server-side keys only)
 ```
@@ -16,8 +16,18 @@ Browser (Next.js, PWA manifest) ──HTTPS/JSON──▶ Spring Boot API ──
 - **Database** – Flyway migrations in `backend/src/main/resources/db/migration`. Learning content
   (grammar, vocabulary, lessons, sentences) is separate from user progress (sessions, cards, events, mistakes).
 
+## Environments
+Spring profiles choose the database and secrets. With no profile active, startup fails instead of falling back to a database.
+
+| Profile | Database | How it runs |
+| --- | --- | --- |
+| `local` | File-based H2 in `backend/.data` (PostgreSQL mode) | `mvn spring-boot:run -Dspring-boot.run.profiles=local` |
+| `prod` | PostgreSQL from `NAVIGO_DB_URL`, `NAVIGO_DB_USER`, `NAVIGO_DB_PASSWORD` | Docker Compose; staging and prod deploys with their own env values |
+
+Tests use in-memory H2 from `backend/src/test/resources/application.yml`.
+
 ## Security
-Stateless JWT (HS256, secret from `NAVIGO_JWT_SECRET`, startup fails if missing/short), BCrypt passwords,
+Stateless JWT (HS256, secret from `NAVIGO_JWT_SECRET`; staging/prod startup fails if missing, `local` uses a dev-only default), BCrypt passwords,
 constant-work login to avoid user enumeration, bean validation on all inputs, centralized error handler
 (no stack traces to clients), CORS limited to configured origins. All endpoints except register/login/health/OpenAPI require a token.
 

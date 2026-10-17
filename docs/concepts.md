@@ -80,7 +80,7 @@ How Flyway works here:
 
 **ESLint.** A linter. It flags code problems and style issues. `npm run lint` runs it.
 
-**Vitest and Testing Library.** Vitest runs unit tests. Testing Library renders React components in tests and queries them the way a user would. `npm test` runs them.
+**Vitest and Testing Library.** Vitest runs unit tests. Testing Library renders React components in tests and queries them the way a user would. `npm run test:coverage` runs them with the coverage gate. `npm test` runs them without coverage.
 
 **Client-side token storage.** The frontend stores the JWT in `localStorage` (see the risk table in [docs/architecture.md](architecture.md)). This is acceptable for the MVP and is planned to change.
 
@@ -95,6 +95,30 @@ How Flyway works here:
 **Environment variables.** Named values set outside the code. The backend reads them through placeholders such as `${NAVIGO_DB_URL}`. Docker Compose reads them from the `.env` file (template: [.env.example](../.env.example)). `.env` holds secrets and is never committed; `.gitignore` excludes it.
 
 **Health check.** A command Docker runs to check that a service is working. For `db` it is `pg_isready`.
+
+## Continuous integration (CI)
+
+**GitHub Actions.** GitHub's automation service. A workflow is a YAML file in `.github/workflows/` that runs jobs on GitHub-hosted machines when an event happens. Here, [ci.yml](../.github/workflows/ci.yml) runs on pull requests into `main`, pushes to `main`, and manual dispatch.
+
+**Job, step, and parallel jobs.** A job is a set of steps on one machine. Steps run in order. Jobs run in parallel unless one `needs` another. The `backend` and `frontend` jobs have no dependency on each other, so they run at the same time.
+
+**Quality gate.** An automated check that fails the build when a metric is below its threshold. Here the gates are: JaCoCo line coverage of at least 80% (backend), Checkstyle with zero violations (backend), and Vitest line coverage of at least 80% (frontend). A gate is only useful when a failure stops the merge, so every gate runs as a required step with no `continue-on-error`.
+
+**CI Quality Gate.** A final job that needs `backend` and `frontend`. It runs even if one of them fails (`if: always()`) and fails unless both results are `success`. A skipped job counts as a failure, so a job that never ran cannot pass the gate. Require this one check in branch protection.
+
+**JaCoCo.** Java Code Coverage. It records which lines and branches the tests executed, writes `jacoco.exec`, and produces an HTML and XML report. Its `check` goal enforces the minimum coverage defined in [backend/pom.xml](../backend/pom.xml). It skips silently if there is no coverage data, so the workflow checks that the report exists.
+
+**Checkstyle.** A linter for Java source. The ruleset in [backend/config/checkstyle.xml](../backend/config/checkstyle.xml) checks correctness only (unused imports, star imports, missing braces, empty catch blocks). It does not reformat code, so the gate does not reshape existing files.
+
+**Vitest coverage (v8).** Vitest measures frontend coverage with V8, the JavaScript engine's built-in coverage. The thresholds are in [vitest.config.mts](../frontend/vitest.config.mts). `npm run test:coverage` runs the tests and fails when lines are below 80%.
+
+**Concurrency.** A workflow setting that cancels older runs when a new commit lands on the same pull request or branch. It saves runner time and keeps the latest result visible.
+
+**Least-privilege permissions.** The workflow sets `permissions: contents: read` at the top. The token can read the repository and nothing else. Pull requests from forks get no secrets.
+
+**Lockfile and `npm ci`.** `package-lock.json` records the exact version of every dependency. `npm ci` installs exactly that set and fails if the lockfile and `package.json` disagree. This makes CI reproducible. Details are in [error-log.md](./error-log.md).
+
+**Reusable standard.** The steps to set this up in any new app are in [ci-cd-standard.md](./ci-cd-standard.md).
 
 ## Other project terms
 

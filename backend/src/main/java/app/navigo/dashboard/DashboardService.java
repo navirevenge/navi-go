@@ -1,7 +1,13 @@
 package app.navigo.dashboard;
 
 import app.navigo.common.ApiException;
-import app.navigo.dashboard.DashboardDtos.*;
+import app.navigo.dashboard.DashboardDtos.Dashboard;
+import app.navigo.dashboard.DashboardDtos.DayStat;
+import app.navigo.dashboard.DashboardDtos.LevelEstimate;
+import app.navigo.dashboard.DashboardDtos.Objective;
+import app.navigo.dashboard.DashboardDtos.SkillScore;
+import app.navigo.dashboard.DashboardDtos.SpeakingEntry;
+import app.navigo.dashboard.DashboardDtos.WeeklyStats;
 import app.navigo.study.StudyDtos.LessonView;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -38,7 +44,9 @@ public class DashboardService {
                 .param("u", userId)
                 .query((rs, i) -> new Object[]{rs.getString(1), rs.getString(2), rs.getString(3), rs.getInt(4)})
                 .optional().orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Learner profile not found"));
-        String displayName = (String) profile[0], selfLevel = (String) profile[1], target = (String) profile[2];
+        String displayName = (String) profile[0];
+        String selfLevel = (String) profile[1];
+        String target = (String) profile[2];
         int goalMinutes = (Integer) profile[3];
 
         ensureObjectives(userId, today, goalMinutes);
@@ -87,7 +95,8 @@ public class DashboardService {
 
         // Weekly stats (last 7 local days including today)
         List<DayStat> days = new ArrayList<>();
-        int wSessions = 0, wMinutes = 0;
+        int wSessions = 0;
+        int wMinutes = 0;
         for (int k = 6; k >= 0; k--) {
             LocalDate d = today.minusDays(k);
             int[] agg = byDay.getOrDefault(d, new int[2]);

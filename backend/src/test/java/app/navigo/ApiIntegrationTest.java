@@ -98,7 +98,9 @@ class ApiIntegrationTest {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String grammarId = null;
         for (JsonNode l : json.readTree(lessons)) {
-            if (l.get("slug").asText().equals("n5-wa-desu")) grammarId = l.get("id").asText();
+            if (l.get("slug").asText().equals("n5-wa-desu")) {
+                grammarId = l.get("id").asText();
+            }
         }
         String started = mvc.perform(post("/api/v1/study-sessions").header("Authorization", auth)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"lessonId\":\"" + grammarId + "\"}"))

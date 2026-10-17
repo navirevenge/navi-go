@@ -48,7 +48,7 @@ Run one side at a time with `make backend` or `make frontend`.
 
 ```bash
 cd backend && mvn verify                                   # unit + MockMvc integration tests (in-memory H2)
-cd frontend && npm run lint && npm run typecheck && npm test && npm run build
+cd frontend && npm run lint && npm run typecheck && npm run test:coverage && npm run build
 ```
 
 Integration tests run Flyway migrations against H2 in PostgreSQL mode; the migrations were also verified

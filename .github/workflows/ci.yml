@@ -1,42 +1,93 @@
 name: CI
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
-  pull_request:
+  workflow_dispatch:
 
+# Least privilege: the default token can only read the repository.
 permissions:
   contents: read
 
+# Cancel superseded runs for the same PR or branch.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
+    name: Backend (Maven verify)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
+          cache-dependency-path: backend/pom.xml
+      # Compiles, runs unit tests, checks Checkstyle, enforces JaCoCo gates, and packages.
       - run: mvn -B verify
+      # JaCoCo's check goal silently skips when no execution data exists, so fail explicitly.
+      - name: Assert JaCoCo report exists
+        run: test -f target/site/jacoco/jacoco.xml
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: backend-jacoco-report
+          path: backend/target/site/jacoco/
+          if-no-files-found: error
 
   frontend:
+    name: Frontend (lint, typecheck, coverage, build)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      # `npm ci` fails if package-lock.json is out of sync with package.json.
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
+      # Vitest exits non-zero when line coverage drops below the threshold in vitest.config.mts.
+      - run: npm run test:coverage
       - run: npm run build
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/
+          if-no-files-found: error
+
+  ci-quality-gate:
+    name: CI Quality Gate
+    # Runs even when a required job fails or is skipped, so the gate always reports.
+    if: always()
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every required job to succeed
+        env:
+          BACKEND: ${{ needs.backend.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+        run: |
+          echo "backend: $BACKEND"
+          echo "frontend: $FRONTEND"
+          if [ "$BACKEND" != "success" ] || [ "$FRONTEND" != "success" ]; then
+            echo "::error::A required job did not succeed (failed, cancelled, or skipped)."
+            exit 1
+          fi

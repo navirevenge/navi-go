@@ -14,4 +14,4 @@ Closes #
 ## Testing
 
 - [ ] `cd backend && mvn verify`
-- [ ] `cd frontend && npm run lint && npm run typecheck && npm test && npm run build`
+- [ ] `cd frontend && npm run lint && npm run typecheck && npm run test:coverage && npm run build`

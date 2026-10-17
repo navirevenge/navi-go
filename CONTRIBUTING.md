@@ -27,7 +27,13 @@ git config core.hooksPath .githooks
 
 ## Tests before pushing
 
+CI runs these same commands. Run them before you push.
+
 ```bash
-cd backend && mvn verify
-cd frontend && npm run lint && npm run typecheck && npm test && npm run build
+cd backend && mvn -B verify
+cd frontend && npm ci && npm run lint && npm run typecheck && npm run test:coverage && npm run build
 ```
+
+`mvn -B verify` compiles, runs the unit tests, enforces the JaCoCo coverage gate and the Checkstyle gate, and packages the jar. Do not skip the tests as a habit. `mvn -B -DskipTests package` is available for a fast package when you have already run the tests, but use it only as an option.
+
+Gates and what CI checks: see [docs/ci-cd-standard.md](docs/ci-cd-standard.md).

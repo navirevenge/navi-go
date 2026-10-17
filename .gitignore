@@ -1,3 +1,5 @@
 .env
 *.log
 .DS_Store
+.data/
+private-docs/

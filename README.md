@@ -26,13 +26,10 @@ Open http://localhost:3000. API: http://localhost:8080, OpenAPI UI: http://local
 ## Run for development
 
 ```bash
-# 1. database
-docker compose --env-file .env up db
-# 2. backend (Java 21)
+# 1. backend (Java 21). Uses file-based H2 in backend/.data; no database container needed.
 cd backend
-export NAVIGO_DB_PASSWORD=<POSTGRES_PASSWORD> NAVIGO_JWT_SECRET=<32+ byte secret>
-mvn spring-boot:run
-# 3. frontend (Node 22+)
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+# 2. frontend (Node 22+)
 cd frontend
 npm ci && npm run dev
 ```

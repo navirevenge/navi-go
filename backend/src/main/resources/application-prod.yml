@@ -1,0 +1,9 @@
+# Staging and production. Every value comes from the environment; startup fails if one is missing.
+server:
+  forward-headers-strategy: framework
+spring:
+  jpa:
+    show-sql: false
+logging:
+  level:
+    root: INFO

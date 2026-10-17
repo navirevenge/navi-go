@@ -1,10 +1,11 @@
+# No defaults for datasource or JWT secret: a profile (local or prod) must supply them.
 spring:
   application:
     name: navigo-backend
   datasource:
-    url: ${NAVIGO_DB_URL:jdbc:postgresql://localhost:5432/navigo}
-    username: ${NAVIGO_DB_USER:navigo}
-    password: ${NAVIGO_DB_PASSWORD:}
+    url: ${NAVIGO_DB_URL}
+    username: ${NAVIGO_DB_USER}
+    password: ${NAVIGO_DB_PASSWORD}
   jpa:
     open-in-view: false
     hibernate:
@@ -15,7 +16,7 @@ spring:
     default-property-inclusion: always
 navigo:
   jwt:
-    secret: ${NAVIGO_JWT_SECRET:}
+    secret: ${NAVIGO_JWT_SECRET}
     ttl: ${NAVIGO_JWT_TTL:12h}
   cors:
     allowed-origins: ${NAVIGO_CORS_ORIGINS:http://localhost:3000}

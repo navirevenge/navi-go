@@ -1,0 +1,9 @@
+# Local development: file-based H2 in PostgreSQL mode. Data persists in backend/.data.
+spring:
+  datasource:
+    url: jdbc:h2:file:./.data/navigo;MODE=PostgreSQL
+    username: sa
+    password: ""
+navigo:
+  jwt:
+    secret: ${NAVIGO_JWT_SECRET:local-only-dev-secret-not-for-deployment-0123456789}

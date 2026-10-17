@@ -21,6 +21,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: prod
       NAVIGO_DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-navigo}
       NAVIGO_DB_USER: ${POSTGRES_USER:-navigo}
       NAVIGO_DB_PASSWORD: ${POSTGRES_PASSWORD}

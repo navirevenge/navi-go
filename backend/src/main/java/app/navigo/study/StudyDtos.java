@@ -19,6 +19,7 @@ public final class StudyDtos {
     public record CompleteSessionRequest(@Min(0) @Max(600) int durationMinutes) {
     }
 
+    // No user_id: ownership is enforced in the WHERE clause, and the caller already knows its own id.
     public record SessionView(UUID id, UUID lessonId, Instant startedAt, Instant completedAt, Integer durationMinutes) {
     }
 }

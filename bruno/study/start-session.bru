@@ -1,0 +1,35 @@
+meta {
+  name: Start study session
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/study-sessions
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "lessonId": "00000000-0000-0000-0000-0000000000b1"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 || res.status === 201) {
+    bru.setVar("sessionId", res.body.id);
+  }
+}
+
+tests {
+  test("starts a session that is not completed", function () {
+    expect(res.status).to.be.oneOf([200, 201]);
+    expect(res.body.id).to.be.a("string");
+    expect(res.body.completedAt).to.be.null;
+  });
+}

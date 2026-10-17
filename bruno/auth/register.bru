@@ -1,0 +1,31 @@
+meta {
+  name: Register
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{newEmail}}",
+    "password": "Passw0rd-test",
+    "displayName": "Bruno Tester",
+    "currentLevel": "N5"
+  }
+}
+
+script:pre-request {
+  bru.setVar("newEmail", "qa." + Date.now() + "@example.com");
+}
+
+tests {
+  test("returns 201 with the new user", function () {
+    expect(res.status).to.equal(201);
+    expect(res.body.user.email).to.equal(bru.getVar("newEmail"));
+  });
+}

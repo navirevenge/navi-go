@@ -4,6 +4,10 @@ spring:
     url: jdbc:h2:file:./.data/navigo;MODE=PostgreSQL
     username: sa
     password: ""
+  h2:
+    console:
+      enabled: true
+
 navigo:
   jwt:
     secret: ${NAVIGO_JWT_SECRET:local-only-dev-secret-not-for-deployment-0123456789}

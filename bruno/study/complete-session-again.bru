@@ -1,0 +1,27 @@
+meta {
+  name: Complete study session again
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/study-sessions/{{sessionId}}/complete
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "durationMinutes": 10
+  }
+}
+
+tests {
+  test("returns 409 for an already completed session", function () {
+    expect(res.status).to.equal(409);
+  });
+}

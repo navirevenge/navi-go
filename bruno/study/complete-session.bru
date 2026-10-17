@@ -1,0 +1,29 @@
+meta {
+  name: Complete study session
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/study-sessions/{{sessionId}}/complete
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "durationMinutes": 10
+  }
+}
+
+tests {
+  test("completes the session with the given duration", function () {
+    expect(res.status).to.equal(200);
+    expect(res.body.completedAt).to.be.a("string");
+    expect(res.body.durationMinutes).to.equal(10);
+  });
+}

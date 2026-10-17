@@ -1,0 +1,24 @@
+meta {
+  name: List lessons
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/lessons
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("returns a non-empty lesson array", function () {
+    expect(res.status).to.equal(200);
+    expect(res.body).to.be.an("array");
+    expect(res.body.length).to.be.greaterThan(0);
+    expect(res.body[0].slug).to.be.a("string");
+  });
+}

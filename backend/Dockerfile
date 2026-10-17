@@ -3,7 +3,7 @@ WORKDIR /src
 COPY pom.xml .
 RUN mvn -B -q dependency:go-offline
 COPY src ./src
-RUN mvn -B -q -DskipTests package
+RUN mvn -B -q package
 
 FROM eclipse-temurin:21-jre
 RUN useradd --system --uid 1001 navigo

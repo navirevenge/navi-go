@@ -74,19 +74,32 @@ npm error `npm ci` can only install packages when your package.json and package-
 
 The lockfile was missing `@emnapi/core`, and `@emnapi/wasi-threads` did not match.
 
+Later, after the first fix was pushed, the CI run still failed with:
+
+```
+npm error Missing: @emnapi/runtime@1.11.3 from lock file
+npm error Missing: @emnapi/core@1.11.3 from lock file
+```
+
 ### Cause
 
-`npm ci` installs exactly what `package-lock.json` records and refuses to run if the lock and `package.json` disagree. The lockfile had been edited to add the new package without a full resolve, so its entries for the `@emnapi` packages were incomplete.
+`npm ci` installs exactly what `package-lock.json` records. It refuses to run if the lock and the dependency tree that npm builds from it disagree.
+
+The `@emnapi` packages are dependencies of optional `wasm32` packages (`@img/sharp-wasm32`, `@unrs/resolver-binding-wasm32-wasi`, `@tailwindcss/oxide-wasm32-wasi`). Those packages were recorded without top-level `@emnapi/core` and `@emnapi/runtime` entries.
+
+The first fix regenerated the lock with npm 11.6.1 (the version on the developer machine). That lock passed locally with npm 11.6.1 and 11.6.2. CI still failed. Newer npm 11 (11.21.1) on Linux x64 reproduced the exact CI error, so the newer npm validator is stricter about these optional entries than the older one.
 
 ### Resolution
 
-1. Regenerate the lockfile: `cd frontend && npm install`.
-2. Validate with a clean install: `rm -rf node_modules && npm ci`. It must pass.
-3. Commit the regenerated `package-lock.json` together with `package.json`.
+1. Regenerate the lock with the newest npm 11 release: `cd frontend && npx npm@11.21.1 install --package-lock-only --ignore-scripts`. This adds top-level `@emnapi/core` and `@emnapi/runtime` entries.
+2. Validate against both versions: `npx npm@11.21.1 ci --os=linux --cpu=x64` (what CI does) and `rm -rf node_modules && npm ci` with npm 11.6.1. Both must pass.
+3. Commit the regenerated `package-lock.json` with `package.json`. Result: PR #12 CI passes on run 39069468467.
 
 ### Prevention
 
-- After changing `package.json`, always check the install with `rm -rf node_modules && npm ci`. Do not treat `npm install` as the check, because it rewrites the lockfile and hides the problem.
+- Generate the lock with the same npm major and minor that CI uses. Check the npm version in the CI log, and use `npx npm@<version>` locally.
+- Check each lock change against a newer npm 11 release, not only the one on your machine.
+- Never treat `npm install` as the check, because it rewrites the lockfile and hides the problem. Validate with `npm ci`.
 
 ---
 
@@ -158,5 +171,5 @@ Added `"coverage/**"` to `globalIgnores` in [eslint.config.mjs](../frontend/esli
 ### Verification status
 
 - Local `mvn -B verify` passes: 10 tests, 0 Checkstyle violations, and the JaCoCo gates (line 80%, branch 55%) met.
-- Pending: the first GitHub Actions run on the pull request.
+- GitHub Actions run 39069468467 on PR #12: backend, frontend, and CI Quality Gate all pass.
 

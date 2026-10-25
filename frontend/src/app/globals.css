@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   --background: #0b0b0c;
   --surface: #151517;
   --surface-2: #1e1e21;
@@ -8,6 +9,21 @@
   --foreground: #f4f4f5;
   --muted: #a1a1aa;
   --accent: #d6313a;
+  --glare: rgb(255 255 255 / 0.07);
+  --card-shadow: rgb(0 0 0 / 0.6);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f6f6f4;
+  --surface: #ffffff;
+  --surface-2: #efefec;
+  --border: #dcdcd7;
+  --foreground: #18181b;
+  --muted: #5c5c66;
+  --accent: #c81e28;
+  --glare: rgb(24 24 27 / 0.05);
+  --card-shadow: rgb(24 24 27 / 0.18);
 }
 
 @theme inline {
@@ -19,10 +35,6 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", "Meiryo", ui-sans-serif, system-ui, sans-serif;
-}
-
-html {
-  color-scheme: dark;
 }
 
 body {
@@ -42,4 +54,37 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .fade-up { animation: none; }
+}
+
+/* The tilt only runs for a mouse-style pointer; touch screens and reduced-motion users keep flat cards. */
+.tilt-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.tilt-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 50%), var(--glare), transparent 60%);
+  transition: opacity 0.3s ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .tilt-card {
+    transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    transition: transform 0.15s ease-out, box-shadow 0.3s ease-out;
+    will-change: transform;
+  }
+
+  .tilt-card:hover {
+    box-shadow: 0 20px 40px -20px var(--card-shadow);
+  }
+
+  .tilt-card:hover::after {
+    opacity: 1;
+  }
 }

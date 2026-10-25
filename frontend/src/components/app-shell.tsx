@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
+import { ThemeToggle } from "./theme-toggle";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut } = useAuth();
@@ -38,12 +39,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="mt-4 border-t border-border pt-4 text-sm">
           <div className="truncate text-muted">{user.displayName}</div>
+          <ThemeToggle className="-mx-3 mt-1" />
           <button onClick={() => { signOut(); router.replace("/login"); }} className="mt-1 text-muted underline-offset-4 hover:text-foreground hover:underline">
             Sign out
           </button>
         </div>
       </aside>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6 md:px-10 md:pb-10 md:pt-10">{children}</main>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6 md:px-10 md:pb-10 md:pt-10">
+        <div className="mb-4 flex justify-end md:hidden">
+          <ThemeToggle />
+        </div>
+        {children}
+      </main>
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-6 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         {NAV_ITEMS.map((n) => {
           const active = pathname.startsWith(n.href);
